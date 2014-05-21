@@ -126,6 +126,7 @@ MediaHandler.prototype = {
    */
   getDescription: function(onSuccess, onFailure, mediaHint) {
     var self = this;
+    var constraints, mediaStream;
 
     /*
      * 1. acquire stream (skip if MediaStream passed in)
@@ -136,6 +137,22 @@ MediaHandler.prototype = {
 
     /* Last functions first, to quiet JSLint */
     function streamAdditionSucceeded() {
+
+      if (self.hasOffer('remote')) {
+        self.peerConnection.ondatachannel = function (evt) {
+          self.dataChannel = evt.channel;
+          self.dataChannel.onmessage = function (e) {
+            console.log('Data Channel received message: ', e.data);
+          };
+        };
+      } else if (self.dataChannelOptions &&
+                 self.peerConnection.createDataChannel) {
+        self.dataChannel = self.peerConnection.createDataChannel('sipjs',
+          (self.dataChannelOptions === true) ? {} : self.dataChannelOptions);
+        self.dataChannel.onmessage = function (e) {
+          console.log('Data Channel received message: ', e.data);
+        };
+      }
       self.createOfferOrAnswer(onSuccess, onFailure, self.RTCConstraints);
     }
 
@@ -157,9 +174,16 @@ MediaHandler.prototype = {
       return;
     }
 
-    if (mediaHint instanceof SIP.WebRTC.MediaStream) {
+    if (mediaHint instanceof SIP.WebRTC.MediaStream || mediaHint.mediaStream) {
       self.logger.log('mediaHint provided to getDescription is a MediaStream, casting to MediaStreamManager:', mediaHint);
       self.mediaStreamManager = SIP.WebRTC.MediaStreamManager.cast(mediaHint);
+      mediaStream = mediaHint.mediaStream || mediaHint;
+    } else { // Media Constraints
+      constraints = mediaHint.constraints || mediaHint;
+    }
+
+    if (mediaHint.data) {
+      self.dataChannelOptions = mediaHint.data;
     }
 
     self.logger.log('acquiring local media');
@@ -171,7 +195,7 @@ MediaHandler.prototype = {
         self.session.connecting();
         onFailure(err);
       },
-      mediaHint
+      mediaStream || constraints
     );
   },
 
