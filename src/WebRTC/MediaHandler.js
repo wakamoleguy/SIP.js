@@ -174,15 +174,15 @@ MediaHandler.prototype = {
       return;
     }
 
-    if (mediaHint instanceof SIP.WebRTC.MediaStream || mediaHint.mediaStream) {
+    if (mediaHint instanceof SIP.WebRTC.MediaStream || (mediaHint && mediaHint.mediaStream)) {
       self.logger.log('mediaHint provided to getDescription is a MediaStream, casting to MediaStreamManager:', mediaHint);
       self.mediaStreamManager = SIP.WebRTC.MediaStreamManager.cast(mediaHint);
-      mediaStream = mediaHint.mediaStream || mediaHint;
+      mediaStream = (mediaHint && mediaHint.mediaStream) || mediaHint;
     } else { // Media Constraints
-      constraints = mediaHint.constraints || mediaHint;
+      constraints = (mediaHint && mediaHint.constraints) || mediaHint;
     }
 
-    if (mediaHint.data) {
+    if (mediaHint && mediaHint.data) {
       self.dataChannelOptions = mediaHint.data;
     }
 
